@@ -47,11 +47,11 @@ end
 % reconstruction
 
 % sqrt sum-of-squares of k-space
-S 'rss 3 data/und2x2 data_ex1/ksp_rss'
+S 'rss 8 data/und2x2 data_ex1/ksp_rss'
 
 % zero-filled reconstruction sqrt-sum-of-squares
 S 'fft -i 6 data/und2x2  data_ex1/zf_coils'
-S 'rss 3 data_ex1/zf_coils data_ex1/zf_rss'
+S 'rss 8 data_ex1/zf_coils data_ex1/zf_rss'
 
 
 ksp_rss = squeeze(readcfl('data_ex1/ksp_rss'));
@@ -145,7 +145,7 @@ S 'saxpy -- -1. data/full data_ex1/proj data_ex1/errmaps'
 
 % Transform error into image domain and combine into a single map.
 S 'fft -i 6 data_ex1/errmaps data_ex1/errimgs'
-S 'rss 3 data_ex1/errimgs data_ex1/errsos_espirit'
+S 'rss 8 data_ex1/errimgs data_ex1/errsos_espirit'
 
 %
 % For comparison: compute sensitivities directly from the center. 
@@ -155,7 +155,7 @@ S 'caldir 20 data/und2x2 data_ex1/sens_direct'
 S 'pocsense -r 0. -i 1 data/full data_ex1/sens_direct data_ex1/proj'
 S 'saxpy -- -1. data/full data_ex1/proj data_ex1/errmaps'
 S 'fft -i 6 data_ex1/errmaps data_ex1/errimgs'
-S 'rss 3 data_ex1/errimgs data_ex1/errsos_direct'
+S 'rss 8 data_ex1/errimgs data_ex1/errsos_direct'
 
 
 errsos_espirit = squeeze(readcfl('data_ex1/errsos_espirit'));
@@ -199,7 +199,7 @@ S 'ecalib -r 20 -m 2 data_ex2/smallfov data_ex2/espiritmaps'
 S 'sense data_ex2/smallfov data_ex2/espiritmaps data_ex2/espiritreco'
 
 % Combination of the two ESPIRiT images using root of sum of squares
-S 'rss 4 data_ex2/espiritreco data_ex2/espiritreco_rss'
+S 'rss 16 data_ex2/espiritreco data_ex2/espiritreco_rss'
 
 espirit_maps = squeeze(readcfl('data_ex2/espiritmaps'));
 figure, imshow3(abs(espirit_maps), [],[2,8])
@@ -238,7 +238,7 @@ end
 
 % A visualization of k-space data
 
-S 'rss 3 data/knee data_ex3/ksp_rss'
+S 'rss 8 data/knee data_ex3/ksp_rss'
 
 ksp_rss = squeeze(readcfl('data_ex3/ksp_rss'));
 figure, imshow(abs(ksp_rss).^0.125, []); title('k-space')
@@ -247,7 +247,7 @@ figure, imshow(abs(ksp_rss).^0.125, []); title('k-space')
 % Root-of-sum-of-squares image
 
 S 'fft -i 6 data/knee data_ex3/knee_imgs'
-S 'rss 3 data_ex3/knee_imgs data_ex3/knee_rss'
+S 'rss 8 data_ex3/knee_imgs data_ex3/knee_rss'
 
 
 % ESPIRiT calibration (one map)
