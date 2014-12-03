@@ -15,8 +15,8 @@ FILES:
 examples.m 		
 
 Matlab examples demonstrating various parts of the 
-reconstruction toolbox. The '!' command is used call the 
-external tools. Results are then read into Matlab and 
+reconstruction toolbox. The 'system' command is used call 
+the external tools. Results are then read into Matlab and 
 displayed.
 
 
