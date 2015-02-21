@@ -3,23 +3,15 @@ function examples
 %%
 %% ESPIRiT examples (based on work by Sana Vaziri)
 %%
-% To begin, add '$(TOOLBOX_PATH)/matlab' to the library path and
-% clear the LD_LIBRARY_PATH environment variable (to work around
-% a bug in Matlab). The environment variable TOOLBOX_PATH needs to
-% be set to the base directory of the reconstruction tools package.
+% To begin, add '$(TOOLBOX_PATH)/matlab' to the library path. The
+% environment variable TOOLBOX_PATH needs to be set to the base
+% directory of the reconstruction tools package.
 
 if isempty(getenv('TOOLBOX_PATH'))
 	error('Environment variable TOOLBOX_PATH is not set.');	
 end
 
 addpath(strcat(getenv('TOOLBOX_PATH'), '/matlab'));
-setenv('PATH', strcat(getenv('TOOLBOX_PATH'), ':', getenv('PATH')));
-
-if ismac==1
-	setenv('DYLD_LIBRARY_PATH', '');
-else
-	setenv('LD_LIBRARY_PATH', '');
-end
 
 
 
@@ -35,11 +27,6 @@ end
 % 
 % The example uses ESPIRiT to obtain the image from 2x2 undersampled data.
 % 
-%
-% create directory for data for example 1
-if exist('data_ex1')==0
-	mkdir('data_ex1') ;
-end
 %%
 
 %%
@@ -47,15 +34,17 @@ end
 % reconstruction
 
 % sqrt sum-of-squares of k-space
-S 'rss 8 data/und2x2 data_ex1/ksp_rss'
+und2x2 = readcfl('data/und2x2');
+ksp_rss = bart('rss 8', und2x2);
 
 % zero-filled reconstruction sqrt-sum-of-squares
-S 'fft -i 6 data/und2x2  data_ex1/zf_coils'
-S 'rss 8 data_ex1/zf_coils data_ex1/zf_rss'
+zf_coils = bart('fft -i 6', und2x2);
+zf_rss = bart('rss 8', zf_coils);
 
+ksp_rss = squeeze(ksp_rss);
+zf_coils = squeeze(zf_coils);
+zf_rss = squeeze(zf_rss);
 
-ksp_rss = squeeze(readcfl('data_ex1/ksp_rss'));
-zf_rss = squeeze(readcfl('data_ex1/zf_rss'));
 figure,subplot(1,2,1), imshow(abs(ksp_rss).^0.125, []); title('k-space')
 subplot(1,2,2), imshow(abs(zf_rss), []); title('zero-filled recon')
 
@@ -63,10 +52,9 @@ subplot(1,2,2), imshow(abs(zf_rss), []); title('zero-filled recon')
 %%
 % Show singular values of the calibration matrix
 %
-S 'ecalib -r 20 -1 -V data/und2x2 data_ex1/calib | grep SVALS > data_ex1/svals.dat'
-fid = fopen('data_ex1/svals.dat');
-SV = fscanf(fid, 'SVALS %*d %f\n');
-fclose(fid);
+calmat = bart('calmat -r 20 -k 6', und2x2);
+[U SV VH] = bart('svd', calmat);
+
 figure, plot(SV);
 title('Singular Values of the Calibration Matrix');
 
@@ -74,18 +62,15 @@ title('Singular Values of the Calibration Matrix');
 
 %%
 % ESPIRiT calibration (using a maximum calibration region of size 20)
-S 'ecalib -r 20 data/und2x2 data_ex1/calib data_ex1/emaps'
+[calib emaps] = bart('ecalib -r 20', und2x2);
 
-%%
-% Print header of the produced file:
-S 'cat data_ex1/calib.hdr'
 
 %%
 % Extraction of first set of maps (0-th subarray along dimension 4)
-S 'slice 4 0 data_ex1/calib data_ex1/sens'
+sens = bart('slice 4 0', calib);
 
 
-sens_maps = squeeze(readcfl('data_ex1/sens'));
+sens_maps = squeeze(sens);
 
 figure,
 subplot(121), imshow3(abs(sens_maps), [],[2,4]);
@@ -103,9 +88,10 @@ title('Phase ESPIRiT 1st Set of Maps')
 % bitmask is 6 = 2^1 + 2^2 which corresponds to the 
 % dimensions 1 and 2.
 
-S 'fft -i 6 data/full data_ex1/coilimgs'
+full = readcfl('data/full');
+coilimgs = bart('fft -i 6', full);
 
-coil_imgs = squeeze(readcfl('data_ex1/coilimgs'));
+coil_imgs = squeeze(coilimgs);
 figure, imshow3(abs(coil_imgs), [],[2,4])
 title('Coil images')
 
@@ -114,7 +100,7 @@ title('Coil images')
 %%
 % Show eigenvalue maps
 
-emaps = squeeze(readcfl('data_ex1/emaps'));
+emaps = squeeze(emaps);
 figure, imshow3(emaps, [], [1, 2]);
 title('First Two Eigenvalue Maps')
 
@@ -123,9 +109,9 @@ title('First Two Eigenvalue Maps')
 
 %%
 % SENSE reconstruction using ESPIRiT maps
-S 'sense data/und2x2 data_ex1/sens data_ex1/reco'
+reco = bart('sense', und2x2, sens);
 
-sense_recon = squeeze(readcfl('data_ex1/reco'));
+sense_recon = squeeze(reco);
 figure, imshow(abs(sense_recon), []); title('ESPIRiT Reconstruction')
 
 
@@ -138,28 +124,24 @@ figure, imshow(abs(sense_recon), []); title('ESPIRiT Reconstruction')
 % onto the sensitivities. This can be done with one
 % iteration of POCSENSE.
 %
-S 'pocsense -r 0. -i 1 data/full data_ex1/sens data_ex1/proj'
+proj = bart('pocsense -r 0. -i 1', full, sens);
 
-% Compute error: full - proj
-S 'saxpy -- -1. data/full data_ex1/proj data_ex1/errmaps'
-
-% Transform error into image domain and combine into a single map.
-S 'fft -i 6 data_ex1/errmaps data_ex1/errimgs'
-S 'rss 8 data_ex1/errimgs data_ex1/errsos_espirit'
+% Compute error and transform it into image domain and combine into a single map.
+errimgs = bart('fft -i 6', (full - proj));
+errsos_espirit = bart('rss 8', errimgs);
 
 %
 % For comparison: compute sensitivities directly from the center. 
-S 'caldir 20 data/und2x2 data_ex1/sens_direct'
+sens_direct = bart('caldir 20', und2x2);
 
 % Compute error map.
-S 'pocsense -r 0. -i 1 data/full data_ex1/sens_direct data_ex1/proj'
-S 'saxpy -- -1. data/full data_ex1/proj data_ex1/errmaps'
-S 'fft -i 6 data_ex1/errmaps data_ex1/errimgs'
-S 'rss 8 data_ex1/errimgs data_ex1/errsos_direct'
+proj = bart('pocsense -r 0. -i 1', full, sens_direct);
+errimgs = bart('fft -i 6', (full - proj));
+errsos_direct = bart('rss 8', errimgs);
 
 
-errsos_espirit = squeeze(readcfl('data_ex1/errsos_espirit'));
-errsos_direct = squeeze(readcfl('data_ex1/errsos_direct'));
+errsos_espirit = squeeze(errsos_espirit);
+errsos_direct = squeeze(errsos_direct);
 
 figure, 
 imshow(abs([errsos_direct errsos_espirit]), []); title('Projection Error (direct calibration vs ESPIRiT)');
@@ -175,40 +157,36 @@ imshow(abs([errsos_direct errsos_espirit]), []); title('Projection Error (direct
 % with SENSE. By using two sets of maps, ESPIRiT can avoid the central
 % artifact which appears in the SENSE reconstruction.
 %
-% create directory for data for example 2
-if exist('data_ex2')==0
-	mkdir('data_ex2') ;
-end
-%
 %%
 
 % Zero padding to make square voxels since resolution in x-y for this
 % data set is lower in phase-encode than readout
-S 'resize -c 2 252 data/smallfov data_ex2/smallfov'
+smallfov = readcfl('data/smallfov');
+smallfov = bart('resize -c 2 252', smallfov);
 
 % Direct calibration of the sensitivities from k-space center for SENSE
-S 'caldir 20 data_ex2/smallfov data_ex2/sensemaps'
+sensemaps = bart('caldir 20', smallfov);
 
 % SENSE reconstruction
-S 'sense data_ex2/smallfov data_ex2/sensemaps data_ex2/sensereco'
+sensereco = bart('sense -r0.01', smallfov, sensemaps);
 
 % ESPIRiT calibration with 2 maps to mitigate with aliasing in the calibration
-S 'ecalib -r 20 -m 2 data_ex2/smallfov data_ex2/espiritmaps'
+espiritmaps = bart('ecalib -r 20 -m 2', smallfov);
 
 % ESPIRiT reconstruction with 2 sets of maps
-S 'sense data_ex2/smallfov data_ex2/espiritmaps data_ex2/espiritreco'
+espiritreco = bart('sense -r0.01', smallfov, espiritmaps);
 
 % Combination of the two ESPIRiT images using root of sum of squares
-S 'rss 16 data_ex2/espiritreco data_ex2/espiritreco_rss'
+espiritreco_rss = bart('rss 16', espiritreco);
 
-espirit_maps = squeeze(readcfl('data_ex2/espiritmaps'));
+espirit_maps = squeeze(espiritmaps);
 figure, imshow3(abs(espirit_maps), [],[2,8])
 title('The two sets of ESPIRiT maps')
 %%
 
 % SENSE image:
 
-reco1 = squeeze(readcfl('data_ex2/sensereco'));
+reco1 = squeeze(sensereco);
 figure,
 subplot(1,2,1), imshow(abs(reco1), [])
 title('SENSE Reconstruction')
@@ -216,7 +194,7 @@ title('SENSE Reconstruction')
 
 % ESPIRiT image:
 
-reco2 = squeeze(readcfl('data_ex2/espiritreco_rss'));
+reco2 = squeeze(espiritreco_rss);
 subplot(1,2,2), imshow(abs(reco2), [])
 title('ESPIRiT Reconstruction from 2 maps')
 
@@ -228,46 +206,41 @@ title('ESPIRiT Reconstruction from 2 maps')
 % This example demonstrates L1-ESPIRiT reconstruction of a human knee.
 % Data has been acquired with variable-density poisson-disc sampling.
 %
-% create directory for data for example 3
-if exist('data_ex3')==0
-	mkdir('data_ex3') ;
-end
 %%
-
 
 
 % A visualization of k-space data
 
-S 'rss 8 data/knee data_ex3/ksp_rss'
+knee = readcfl('data/knee');
+ksp_rss = bart('rss 8', knee);
 
-ksp_rss = squeeze(readcfl('data_ex3/ksp_rss'));
+ksp_rss = squeeze(ksp_rss);
 figure, imshow(abs(ksp_rss).^0.125, []); title('k-space')
 
 
 % Root-of-sum-of-squares image
 
-S 'fft -i 6 data/knee data_ex3/knee_imgs'
-S 'rss 8 data_ex3/knee_imgs data_ex3/knee_rss'
+knee_imgs = bart('fft -i 6', knee);
+knee_rss = bart('rss 8', knee_imgs);
 
 
 % ESPIRiT calibration (one map)
 
-S 'ecalib -c0. -m1 data/knee data_ex3/knee_maps'
+knee_maps = bart('ecalib -c0. -m1', knee);
 
 
 
 % l1-regularized reconstruction (wavelet basis)
 
-S 'sense -l1 -r0.005 data/knee data_ex3/knee_maps data_ex3/knee_l1'
+knee_l1 = bart('sense -l1 -r0.005', knee, knee_maps);
 
 
 
 % Results
 
-knee_rss = squeeze(readcfl('data_ex3/knee_rss')) / 1.5E9;
-knee_l1 = squeeze(readcfl('data_ex3/knee_l1'));
+knee_rss = knee_rss / 1.5E9;
 
-image = [ knee_rss knee_l1 ];
+image = [ squeeze(knee_rss) squeeze(knee_l1) ];
 figure, imshow(abs(image), [])
 title('Zero-filled and Compressed Sensing/Parallel Imaging')
 %%
@@ -279,55 +252,46 @@ title('Zero-filled and Compressed Sensing/Parallel Imaging')
 %
 % Various tools are demonstrated by manipulating an image.
 %
-% create directory for data for example 4
-if exist('data_ex4')==0
-	mkdir('data_ex4') ;
-end
 %%
 
 % Zero pad
 
-S 'resize -c 1 300 data_ex3/knee_l1 data_ex4/tmp'
-S 'resize -c 2 300 data_ex4/tmp data_ex4/knee2'
+knee2 = bart('resize -c 1 300 2 300', knee_l1);
 
 % Switch dimensions 1 and 2
 
-S 'transpose 1 2 data_ex4/knee2 data_ex4/tmp'
+tmp = bart('transpose 1 2', knee2);
 
 % Scale by a factor of 0.5
 
-S 'scale 0.5 data_ex4/tmp data_ex4/tmp2'
+tmp2 = bart('scale 0.5', tmp);
 
 % Join original and the transposed and scaled version along dimension 2.
 
-S 'join 2 data_ex4/knee2 data_ex4/tmp2 data_ex4/joined'
+joined = bart('join 2', knee2, tmp2);
 
 % Flip 1st and 2nd dimension (2^1 + 2^2 = 6)
 
-S 'flip 6 data_ex4/joined data_ex4/tmp'
+tmp = bart('flip 6', joined);
 
 % Join flipped and original along dimension 1.
 
-S 'join 1 data_ex4/joined data_ex4/tmp data_ex4/big'
+big = bart('join 1', joined, tmp);
 
 % Extract sub-array
 
-S 'extract 1 150 449 data_ex4/big data_ex4/tmp'
-S 'extract 2 150 449 data_ex4/tmp data_ex4/small'
+tmp = bart('extract 1 150 449', big);
+small = bart('extract 2 150 449', tmp);
 
 % Circular shift by 115 pixels
 
-S 'circshift 1 150 data_ex4/small data_ex4/tmp'
-S 'circshift 2 150 data_ex4/tmp data_ex4/shift'
+tmp = bart('circshift 1 150', small);
+shift = bart('circshift 2 150', tmp);
 
 % Show the final result.
 
-image = readcfl('data_ex4/shift');
-figure, imshow(abs(squeeze(image)), []);
+figure, imshow(abs(squeeze(shift)), []);
 
 % end global function
 end
-
-% octave doesn't support the ! syntax
-function S(x); system(x); end
 

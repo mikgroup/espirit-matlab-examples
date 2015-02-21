@@ -1,23 +1,13 @@
 
 To run the Matlab examples, set the environment variable 
 TOOLBOX_PATH to the base directory of the reconstruction
-tools E.g. if the toolbox is installed in ~/recon/ 
-use the shell command 
-
-export TOOLBOX_PATH=~/recon/
-
-to set the environment variable.
+tools. You can call the 'vars.m' matlab script from the
+toolbox directory to set the path.
 
 
-FILES:
-
-
-examples.m 		
-
-Matlab examples demonstrating various parts of the 
-reconstruction toolbox. The 'system' command is used call 
-the external tools. Results are then read into Matlab and 
-displayed.
+The Matlab examples demonstrate various parts of the
+reconstruction toolbox. The 'bart' command is used call
+the external tools. Results are then displayed in Matlab.
 
 
 
