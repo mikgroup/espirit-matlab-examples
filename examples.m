@@ -1,6 +1,6 @@
 
 % setup path
-source 'setup
+source setup.m
 
 % ESPIRiT
 espirit
