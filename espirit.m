@@ -96,7 +96,8 @@ title('First Two Eigenvalue Maps')
 
 %%
 % SENSE reconstruction using ESPIRiT maps
-reco = bart('sense', und2x2, sens);
+% (using the generalized parallel imaging compressed sensing tool)
+reco = bart('pics', und2x2, sens);
 
 sense_recon = squeeze(reco);
 figure, imshow(abs(sense_recon), []); title('ESPIRiT Reconstruction')
@@ -155,13 +156,13 @@ smallfov = bart('resize -c 2 252', smallfov);
 sensemaps = bart('caldir 20', smallfov);
 
 % SENSE reconstruction
-sensereco = bart('sense -r0.01', smallfov, sensemaps);
+sensereco = bart('pics -r0.01', smallfov, sensemaps);
 
 % ESPIRiT calibration with 2 maps to mitigate with aliasing in the calibration
 espiritmaps = bart('ecalib -r 20 -m 2', smallfov);
 
 % ESPIRiT reconstruction with 2 sets of maps
-espiritreco = bart('sense -r0.01', smallfov, espiritmaps);
+espiritreco = bart('pics -r0.01', smallfov, espiritmaps);
 
 % Combination of the two ESPIRiT images using root of sum of squares
 espiritreco_rss = bart('rss 16', espiritreco);
@@ -219,7 +220,7 @@ knee_maps = bart('ecalib -c0. -m1', knee);
 
 % l1-regularized reconstruction (wavelet basis)
 
-knee_l1 = bart('sense -l1 -r0.01', knee, knee_maps);
+knee_l1 = bart('pics -l1 -r0.01', knee, knee_maps);
 
 
 
