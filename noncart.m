@@ -38,7 +38,7 @@ reco2 = bart('pics -S -r0.001 -t', traj_rad2, ksp_sim, sens);
 
 
 
-figure, imshow(abs(squeeze([reco1, reco2 * 5])), []);
+figure, imshow(abs(squeeze([reco1, reco2])), []);
 title('Inverse Gridding vs Parallel Imaging')
 
 
