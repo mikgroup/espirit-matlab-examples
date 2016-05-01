@@ -9,4 +9,6 @@ end
 addpath(strcat(getenv('TOOLBOX_PATH'), '/matlab'));
 
 
+% print version information
+bart('version -V');
 
