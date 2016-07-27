@@ -1,7 +1,7 @@
 
 To run the Matlab examples, set the environment variable 
 TOOLBOX_PATH to the base directory of the reconstruction
-tools. You can call the 'vars.m' matlab script from the
+tools. You can call the ‘startup.m’ matlab script from the
 toolbox directory to set the path.
 
 
